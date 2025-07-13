@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/google/go-github/v57/github"
 	"github.com/sirupsen/logrus"
@@ -204,7 +205,7 @@ func (c *Client) GetPersonaPullRequests(ctx context.Context) ([]*github.PullRequ
 		}
 	}
 
-	c.logger.Infof("Found %d open Studio PRs in %s/%s", 
+	c.logger.Infof("Found %d open Studio PRs in %s/%s",
 		len(studioPRs), c.personasOwner, c.personasRepo)
 	return studioPRs, nil
 }
@@ -216,12 +217,12 @@ func (c *Client) isStudioPR(pr *github.PullRequest) bool {
 			return true
 		}
 	}
-	
+
 	// Check if PR body contains Studio signature
 	if pr.Body != nil && strings.Contains(*pr.Body, "Studio") {
 		return true
 	}
-	
+
 	return false
 }
 
@@ -305,4 +306,110 @@ The persona has been regenerated with your suggestions in mind.
 	}
 
 	return nil
+}
+
+// GetFileContent retrieves the content of a file from the personas repository
+func (c *Client) GetFileContent(ctx context.Context, filePath string) (string, error) {
+	c.logger.Debugf("Fetching file content from personas repo: %s", filePath)
+
+	fileContent, _, _, err := c.client.Repositories.GetContents(
+		ctx, c.personasOwner, c.personasRepo, filePath, nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to get file %s: %w", filePath, err)
+	}
+
+	if fileContent == nil {
+		return "", fmt.Errorf("file %s not found", filePath)
+	}
+
+	// Decode the content (GitHub returns base64 encoded content)
+	content, err := fileContent.GetContent()
+	if err != nil {
+		return "", fmt.Errorf("failed to decode file content: %w", err)
+	}
+
+	c.logger.Debugf("Successfully fetched file content: %d characters", len(content))
+	return content, nil
+}
+
+// GetPRStatus retrieves the status of a pull request
+func (c *Client) GetPRStatus(ctx context.Context, prNumber int) (string, error) {
+	c.logger.Debugf("Checking status of PR #%d", prNumber)
+
+	pr, _, err := c.client.PullRequests.Get(ctx, c.personasOwner, c.personasRepo, prNumber)
+	if err != nil {
+		return "", fmt.Errorf("failed to get PR #%d: %w", prNumber, err)
+	}
+
+	if pr.State == nil {
+		return "", fmt.Errorf("PR #%d has no state", prNumber)
+	}
+
+	status := *pr.State
+	c.logger.Debugf("PR #%d status: %s", prNumber, status)
+	return status, nil
+}
+
+// ListPersonaFolders lists all persona folders in the personas repository
+func (c *Client) ListPersonaFolders(ctx context.Context) ([]string, error) {
+	c.logger.Debug("Listing persona folders from GitHub")
+
+	_, dirContent, _, err := c.client.Repositories.GetContents(
+		ctx, c.personasOwner, c.personasRepo, "personas", nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get personas directory: %w", err)
+	}
+
+	var folderNames []string
+	for _, item := range dirContent {
+		if item.Type != nil && *item.Type == "dir" && item.Name != nil {
+			folderNames = append(folderNames, *item.Name)
+		}
+	}
+
+	c.logger.Debugf("Found %d persona folders in GitHub", len(folderNames))
+	return folderNames, nil
+}
+
+// GetFileModTime gets the last modification time of a file from GitHub
+func (c *Client) GetFileModTime(ctx context.Context, filePath string) (time.Time, error) {
+	c.logger.Debugf("Getting modification time for file: %s", filePath)
+
+	// Get commits for the specific file to find the last modification
+	opts := &github.CommitsListOptions{
+		Path: filePath,
+		ListOptions: github.ListOptions{
+			PerPage: 1, // We only need the most recent commit
+		},
+	}
+
+	commits, _, err := c.client.Repositories.ListCommits(ctx, c.personasOwner, c.personasRepo, opts)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("failed to get commits for file %s: %w", filePath, err)
+	}
+
+	if len(commits) == 0 {
+		return time.Time{}, fmt.Errorf("no commits found for file %s", filePath)
+	}
+
+	// Get the commit date from the most recent commit
+	if commits[0].Commit == nil || commits[0].Commit.Committer == nil || commits[0].Commit.Committer.Date == nil {
+		return time.Time{}, fmt.Errorf("invalid commit data for file %s", filePath)
+	}
+
+	modTime := commits[0].Commit.Committer.Date.Time
+	c.logger.Debugf("File %s last modified: %v", filePath, modTime)
+	return modTime, nil
+}
+
+// FileExists checks if a file exists in the GitHub repository
+func (c *Client) FileExists(ctx context.Context, filePath string) bool {
+	c.logger.Debugf("Checking if file exists: %s", filePath)
+
+	_, _, _, err := c.client.Repositories.GetContents(
+		ctx, c.personasOwner, c.personasRepo, filePath, nil)
+	
+	exists := err == nil
+	c.logger.Debugf("File %s exists: %v", filePath, exists)
+	return exists
 }
