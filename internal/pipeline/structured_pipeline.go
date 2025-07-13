@@ -78,6 +78,16 @@ func (p *Pipeline) processNewIssuesWithStructure(ctx context.Context) error {
 		if err != nil {
 			p.logger.Errorf("Failed to create structured PR for issue #%d: %v",
 				*issue.Number, err)
+			
+			// Check if PR already exists (common error)
+			if strings.Contains(err.Error(), "A pull request already exists") {
+				p.logger.Infof("PR already exists for issue #%d, marking as processed", *issue.Number)
+				// Mark as processed to avoid repeated attempts
+				p.processed[*issue.Number] = true
+				if saveErr := p.saveProcessedIssue(*issue.Number); saveErr != nil {
+					p.logger.Warnf("Failed to save processed issue: %v", saveErr)
+				}
+			}
 			continue
 		}
 
