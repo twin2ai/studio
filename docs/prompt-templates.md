@@ -2,40 +2,31 @@
 
 ## Overview
 
-Studio uses external prompt template files for generating different persona variations. This allows for easy customization without modifying code.
+Studio uses external prompt template files for persona synthesis. This allows for easy customization without modifying code.
 
 ## Template Files
 
 All prompt templates are stored in the `prompts/` directory:
 
-### 1. `prompt_ready_generation.txt`
-Generates the condensed 500-1000 word version from the synthesized persona.
+### 1. `persona_combination.txt`
+Combines multiple AI-generated personas into a single synthesized version.
 
-**Input**: `{{SYNTHESIZED_PERSONA}}`
-**Output**: Prompt-ready condensed version
+**Input**: Multiple personas wrapped in delimiters
+**Output**: Unified synthesized persona
 
-### 2. `constrained_formats_generation.txt`
-Creates multiple length-constrained versions from the synthesized persona.
+### 2. `persona_combination_feedback.txt`
+Regenerates personas based on user feedback.
 
-**Input**: `{{SYNTHESIZED_PERSONA}}`
-**Output**: Various formats (one-liner, tweet, bio, etc.)
-
-### 3. `platform_adaptation.txt`
-Adapts the synthesized persona for specific platforms.
-
-**Inputs**: 
-- `{{SYNTHESIZED_PERSONA}}`
-- `{{PLATFORM}}`
-**Output**: Platform-specific adaptation
+**Input**: 
+- `{{FEEDBACK}}` - User feedback
+- `{{PERSONAS}}` - Regenerated personas
+**Output**: Improved synthesized persona
 
 ## Data Flow
 
 ```
 1. AI Providers → Individual Personas
 2. Synthesis → Synthesized Persona
-3. Synthesized Persona → Prompt-Ready Version
-4. Synthesized Persona → Constrained Formats
-5. Synthesized Persona → Platform Adaptations
 ```
 
 The synthesized persona is the single source for all variations, ensuring consistency.
@@ -46,8 +37,8 @@ To customize the generation process:
 
 1. Edit the relevant prompt file in `prompts/`
 2. Use the placeholder variables:
-   - `{{SYNTHESIZED_PERSONA}}` - The combined persona
-   - `{{PLATFORM}}` - Platform name (for adaptations)
+   - `{{PERSONAS}}` - The persona content to process
+   - `{{FEEDBACK}}` - User feedback (for regeneration)
 3. Save the file - changes take effect immediately
 
 ## Template Structure
@@ -69,18 +60,6 @@ To customize the generation process:
 3. **Transparency**: Prompts are visible and editable
 4. **Version Control**: Track prompt changes in git
 5. **Experimentation**: Easy to test different approaches
-
-## Example Customization
-
-To add a new constrained format:
-
-1. Edit `prompts/constrained_formats_generation.txt`
-2. Add a new item like:
-   ```
-   7. **Haiku Format** (3 lines, 5-7-5 syllables): Poetic essence
-   ```
-3. Save the file
-4. Next generation will include the haiku format
 
 ## Fallback Behavior
 

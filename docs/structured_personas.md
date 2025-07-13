@@ -17,18 +17,7 @@ personas/
 │   │   ├── gemini.md
 │   │   ├── grok.md
 │   │   └── gpt.md
-│   ├── synthesized.md              # Full combined persona
-│   ├── prompt_ready.md             # 500-1000 word condensed version
-│   ├── constrained_formats.md      # Various length-constrained versions
-│   └── platforms/                  # Platform-specific adaptations
-│       ├── chatgpt.md
-│       ├── claude.md
-│       ├── gemini.md
-│       ├── character_ai.md
-│       ├── discord_bot.md
-│       ├── twitter_x.md
-│       ├── linkedin.md
-│       └── email_assistant.md
+│   └── synthesized.md              # Full combined persona
 ```
 
 ## File Descriptions
@@ -49,19 +38,6 @@ personas/
 - Captures essential characteristics and behaviors
 - Best for quick implementation
 
-### 4. **Constrained Formats** (`constrained_formats.md`)
-Contains multiple length-constrained versions:
-- **One-Liner**: Max 100 characters
-- **Tweet-Length**: Max 280 characters
-- **Elevator Pitch**: ~75 words
-- **Short Bio**: 100-150 words
-- **Executive Summary**: 200-300 words
-- **Single Paragraph**: 150-200 words
-
-### 5. **Platform Adaptations** (`/platforms/`)
-Platform-specific versions optimized for:
-- ChatGPT
-- Claude
 - Gemini
 - Character.AI
 - Discord Bot
@@ -81,8 +57,6 @@ Platform-specific versions optimized for:
 2. **`internal/multiprovider/enhanced_generator.go`**
    - `ProcessIssueWithStructure()`: Generates complete persona package
    - `generatePromptReadyVersion()`: Creates condensed version
-   - `generateConstrainedFormats()`: Creates length-limited versions
-   - `generatePlatformAdaptations()`: Creates platform-specific versions
 
 3. **`internal/pipeline/structured_pipeline.go`**
    - `processNewIssuesWithStructure()`: Handles new issues
@@ -95,7 +69,7 @@ Platform-specific versions optimized for:
    - Issue with `create-persona` label detected
    - All 4 AI providers generate personas in parallel
    - Gemini synthesizes into full version
-   - Additional versions generated (prompt-ready, constrained, platforms)
+   - Additional versions generated (prompt-ready)
    - Complete package created in structured folders
 
 2. **PR Creation**:
@@ -114,15 +88,12 @@ Platform-specific versions optimized for:
 2. **Flexibility**: Multiple versions for different use cases
 3. **Discoverability**: README guides users to right version
 4. **Analysis**: Raw outputs preserved for comparison
-5. **Immediate Use**: Prompt-ready version for quick implementation
-6. **Platform Optimization**: Tailored versions for specific platforms
+5. **Immediate Use**: Synthesized version ready for use
 
 ## Usage Recommendations
 
 - **Quick Implementation**: Use `prompt_ready.md`
 - **Detailed Work**: Use `synthesized.md`
-- **Platform-Specific**: Check `/platforms/` folder
-- **Length Constraints**: See `constrained_formats.md`
 - **Analysis**: Compare `/raw/` outputs
 
 ## Future Enhancements

@@ -211,7 +211,7 @@ Successfully synthesized your update with the existing persona for **%s**.
 
 A pull request has been created with the updated version. The synthesis combines your input with the existing persona to create an improved version.
 
-**Note**: Only the synthesized version is updated. Platform adaptations and constrained formats are not regenerated for updates.
+**Note**: Only the synthesized version is updated in update requests.
 
 ---
 *[Studio](https://github.com/twin2ai/studio) - Multi-AI Persona Generation Pipeline*`, request.PersonaName)

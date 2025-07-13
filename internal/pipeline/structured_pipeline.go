@@ -282,20 +282,8 @@ func (p *Pipeline) updateStructuredPR(ctx context.Context, pr *github.PullReques
 		
 		// Main files
 		{fmt.Sprintf("%s/synthesized.md", baseFolder), files.FullSynthesis, "Update synthesized persona"},
-		{fmt.Sprintf("%s/prompt_ready.md", baseFolder), files.PromptReady, "Update prompt-ready version"},
-		{fmt.Sprintf("%s/constrained_formats.md", baseFolder), files.ConstrainedFormats, "Update constrained formats"},
 	}
 
-	// Add platform-specific adaptations
-	for platform, content := range files.PlatformAdaptations {
-		sanitizedPlatform := strings.ToLower(strings.ReplaceAll(platform, " ", "_"))
-		filePath := fmt.Sprintf("%s/platforms/%s.md", baseFolder, sanitizedPlatform)
-		fileUpdates = append(fileUpdates, struct {
-			path    string
-			content string
-			message string
-		}{filePath, content, fmt.Sprintf("Update %s platform adaptation", platform)})
-	}
 
 	// Update each file
 	for _, update := range fileUpdates {
@@ -339,9 +327,6 @@ func (p *Pipeline) updateStructuredPR(ctx context.Context, pr *github.PullReques
 All files in the persona package have been regenerated to address the feedback provided:
 - Raw outputs from all 4 AI providers
 - Synthesized persona
-- Prompt-ready version
-- Constrained formats
-- Platform adaptations
 
 The complete package has been updated to incorporate your suggestions.
 

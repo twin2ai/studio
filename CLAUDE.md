@@ -63,14 +63,14 @@ docker-compose logs -f studio
 ### Data Flow
 - **Input**: GitHub issues with `create-persona` label
 - **Processing**: Parallel AI generation → Individual artifact storage → Gemini synthesis
-- **Synthesis Chain**: Synthesized persona → Prompt-ready version, Constrained formats, Platform adaptations
+- **Synthesis Chain**: Raw personas → Synthesized persona
 - **Output**: Combined persona in PR + individual responses in `artifacts/`
 - **Feedback Loop**: PR comments trigger regeneration with enhanced prompts
 
 ### Prompt Templates
 - **Location**: `prompts/` directory contains all generation prompts
 - **Customizable**: Edit prompt files without modifying code
-- **Templates**: `prompt_ready_generation.txt`, `constrained_formats_generation.txt`, `platform_adaptation.txt`
+- **Templates**: `persona_combination.txt`, `persona_combination_feedback.txt`
 
 ### State Management
 - **Processed Issues**: Tracked in `data/processed_issues.txt` to prevent duplicate processing

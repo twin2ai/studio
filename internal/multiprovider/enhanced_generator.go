@@ -2,28 +2,15 @@ package multiprovider
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/google/go-github/v57/github"
 	gh "github.com/twin2ai/studio/internal/github"
 	"github.com/twin2ai/studio/pkg/models"
 )
 
-// Platform represents a platform configuration
-type Platform struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Enabled     bool   `json:"enabled"`
-}
-
-// PlatformConfig holds the platform configuration
-type PlatformConfig struct {
-	Platforms []Platform `json:"platforms"`
-}
 
 // ProcessIssueWithStructure processes an issue and generates a complete persona package
 func (g *Generator) ProcessIssueWithStructure(ctx context.Context, issue *github.Issue) (*models.Persona, *gh.PersonaFiles, error) {
@@ -91,11 +78,7 @@ func (g *Generator) ProcessIssueWithStructureAndUser(ctx context.Context, issue 
 	// Use persona name from issue title
 	personaName := *issue.Title
 
-	// Skip generating additional versions for now
-	g.logger.Info("Skipping prompt-ready, constrained formats, and platform adaptations generation")
-	promptReady := fullSynthesis
-	constrainedFormats := "# Constrained Formats\n\n*Generation of constrained formats is currently disabled.*"
-	platformAdaptations := make(map[string]string)
+
 
 	// Create PersonaFiles structure
 	files := &gh.PersonaFiles{
@@ -105,9 +88,6 @@ func (g *Generator) ProcessIssueWithStructureAndUser(ctx context.Context, issue 
 		GPTRaw:              gptRaw,
 		UserRaw:             userPersona,
 		FullSynthesis:       fullSynthesis,
-		PromptReady:         promptReady,
-		ConstrainedFormats:  constrainedFormats,
-		PlatformAdaptations: platformAdaptations,
 	}
 
 	// Create Persona model
@@ -129,168 +109,9 @@ func (g *Generator) loadPromptFromFile(filename string) (string, error) {
 	return string(data), nil
 }
 
-// loadPlatforms loads the platform configuration from file
-func (g *Generator) loadPlatforms() ([]string, error) {
-	configPath := filepath.Join("config", "platforms.json")
-	data, err := os.ReadFile(configPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load platforms config: %w", err)
-	}
 
-	var config PlatformConfig
-	if err := json.Unmarshal(data, &config); err != nil {
-		return nil, fmt.Errorf("failed to parse platforms config: %w", err)
-	}
 
-	var enabledPlatforms []string
-	for _, platform := range config.Platforms {
-		if platform.Enabled {
-			enabledPlatforms = append(enabledPlatforms, platform.Name)
-		}
-	}
 
-	if len(enabledPlatforms) == 0 {
-		return nil, fmt.Errorf("no platforms enabled in configuration")
-	}
-
-	return enabledPlatforms, nil
-}
-
-// generatePromptReadyVersion creates a 500-1000 word condensed version
-func (g *Generator) generatePromptReadyVersion(ctx context.Context, synthesizedPersona, personaName string) (string, error) {
-	g.logger.Infof("Generating prompt-ready version for %s", personaName)
-
-	// Load prompt template
-	promptTemplate, err := g.loadPromptFromFile("prompt_ready_generation.txt")
-	if err != nil {
-		g.logger.Warnf("Failed to load prompt template: %v, using fallback", err)
-		promptTemplate = `Create a prompt-ready condensed version of the following synthesized persona in 500-1000 words. This version should:
-
-1. Capture the essential characteristics and behaviors
-2. Be immediately usable in AI prompts
-3. Focus on the most distinctive and important traits
-4. Include key speaking patterns, values, and expertise
-5. Be formatted for easy copy-paste into prompts
-
-Start your response immediately with the condensed persona content. Do NOT include any preambles or meta-commentary.
-
-SYNTHESIZED PERSONA:
-{{SYNTHESIZED_PERSONA}}
-
-Create the condensed version now:`
-	}
-
-	// Replace placeholder with synthesized persona
-	prompt := strings.ReplaceAll(promptTemplate, "{{SYNTHESIZED_PERSONA}}", synthesizedPersona)
-
-	// Use Gemini with lower temperature for synthesis task
-	condensed, err := g.gemini.GeneratePersonaSynthesis(ctx, prompt)
-	if err != nil {
-		return "", fmt.Errorf("failed to generate prompt-ready version: %w", err)
-	}
-
-	return condensed, nil
-}
-
-// generateConstrainedFormats creates various length-constrained versions
-func (g *Generator) generateConstrainedFormats(ctx context.Context, synthesizedPersona, personaName string) (string, error) {
-	g.logger.Infof("Generating constrained formats for %s", personaName)
-
-	// Load prompt template
-	promptTemplate, err := g.loadPromptFromFile("constrained_formats_generation.txt")
-	if err != nil {
-		g.logger.Warnf("Failed to load prompt template: %v, using fallback", err)
-		promptTemplate = `Create multiple constrained format versions of the following synthesized persona. Generate each of these formats:
-
-1. **One-Liner** (max 100 characters): A single sentence capturing the essence
-2. **Tweet-Length** (max 280 characters): Core identity in tweet format
-3. **Elevator Pitch** (30 seconds / ~75 words): Quick introduction
-4. **Short Bio** (100-150 words): Brief professional biography
-5. **Executive Summary** (200-300 words): Key points for quick reference
-6. **Single Paragraph** (150-200 words): Flowing narrative description
-
-Format your response as a Markdown document with clear headers for each version. Start immediately with the content.
-
-SYNTHESIZED PERSONA:
-{{SYNTHESIZED_PERSONA}}
-
-Generate the constrained versions now:`
-	}
-
-	// Replace placeholder with synthesized persona
-	prompt := strings.ReplaceAll(promptTemplate, "{{SYNTHESIZED_PERSONA}}", synthesizedPersona)
-
-	// Use Gemini with lower temperature for synthesis task
-	constrained, err := g.gemini.GeneratePersonaSynthesis(ctx, prompt)
-	if err != nil {
-		return "", fmt.Errorf("failed to generate constrained formats: %w", err)
-	}
-
-	return constrained, nil
-}
-
-// generatePlatformAdaptations creates platform-specific versions
-func (g *Generator) generatePlatformAdaptations(ctx context.Context, synthesizedPersona, personaName string) (map[string]string, error) {
-	g.logger.Infof("Generating platform adaptations for %s", personaName)
-
-	// Load platforms from configuration
-	platforms, err := g.loadPlatforms()
-	if err != nil {
-		g.logger.Warnf("Failed to load platforms config: %v, using defaults", err)
-		// Fallback to default platforms
-		platforms = []string{
-			"ChatGPT",
-			"Claude",
-			"Gemini",
-			"Character.AI",
-			"Discord Bot",
-			"Twitter/X",
-			"LinkedIn",
-			"Email Assistant",
-		}
-	}
-
-	g.logger.Infof("Generating adaptations for %d platforms", len(platforms))
-
-	// Load prompt template
-	promptTemplate, err := g.loadPromptFromFile("platform_adaptation.txt")
-	if err != nil {
-		g.logger.Warnf("Failed to load prompt template: %v, using fallback", err)
-		promptTemplate = `Adapt the following synthesized persona specifically for use on {{PLATFORM}}. Consider:
-
-1. Platform-specific constraints and features
-2. Optimal formatting for the platform
-3. Relevant use cases and interactions
-4. Platform culture and expectations
-5. Technical limitations or opportunities
-
-Start your response immediately with the adapted persona. Do NOT include any preambles.
-
-SYNTHESIZED PERSONA TO ADAPT:
-{{SYNTHESIZED_PERSONA}}
-
-Create the {{PLATFORM}} adaptation now:`
-	}
-
-	adaptations := make(map[string]string)
-
-	// Generate adaptations for each platform
-	for _, platform := range platforms {
-		// Replace placeholders
-		prompt := strings.ReplaceAll(promptTemplate, "{{PLATFORM}}", platform)
-		prompt = strings.ReplaceAll(prompt, "{{SYNTHESIZED_PERSONA}}", synthesizedPersona)
-
-		adapted, err := g.gemini.GeneratePersonaSynthesis(ctx, prompt)
-		if err != nil {
-			g.logger.Warnf("Failed to generate %s adaptation: %v", platform, err)
-			continue
-		}
-
-		adaptations[platform] = adapted
-	}
-
-	return adaptations, nil
-}
 
 // UpdatePersonaWithUserInput updates an existing persona with user-provided content
 func (g *Generator) UpdatePersonaWithUserInput(ctx context.Context, personaName string, existingPersona string, userPersona string) (string, error) {
@@ -404,11 +225,7 @@ Please create an improved version that addresses all the feedback points above.`
 	// Use persona name from issue title
 	personaName := *issue.Title
 
-	// Skip generating additional versions for now
-	g.logger.Info("Skipping prompt-ready, constrained formats, and platform adaptations generation")
-	promptReady := fullSynthesis
-	constrainedFormats := "# Constrained Formats\n\n*Generation of constrained formats is currently disabled.*"
-	platformAdaptations := make(map[string]string)
+
 
 	// Create PersonaFiles structure
 	files := &gh.PersonaFiles{
@@ -418,9 +235,6 @@ Please create an improved version that addresses all the feedback points above.`
 		GPTRaw:              gptRaw,
 		UserRaw:             "", // No user persona in regeneration
 		FullSynthesis:       fullSynthesis,
-		PromptReady:         promptReady,
-		ConstrainedFormats:  constrainedFormats,
-		PlatformAdaptations: platformAdaptations,
 	}
 
 	// Create Persona model

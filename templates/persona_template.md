@@ -8,7 +8,6 @@ Please conduct extensive research and develop a detailed persona profile that ca
 - **Section 0**: Core Essence (Priority Elements)
 - **Sections 1-10**: Core persona profile (3,500-4,500 words total)
 - **Section 10.5**: Platform Adaptation Bank (500-1,000 words)
-- **Section 11**: Six constrained format versions
 - **Optional Appendix**: Source documentation and authenticity assessment
 - **Total Length**: 4,500-5,500 words including all components
 
@@ -250,42 +249,6 @@ Comprehensive collection with context:
 - **Signature expressions**: 20+ examples with frequency and evolution notes
 - **Power words**: Their most impactful vocabulary with usage patterns
 
-### 11. Constrained Formats
-Create concise versions for quick reference and specific applications:
-
-#### a) Style Descriptor (50-200 characters)
-- For platforms requiring brief style descriptions
-- Format: "adjective + role/identity + key trait + emotional tone + signature element"
-- Example: "Gentle British naturalist sage, 90 WPM measured wisdom, semi-whispered authority, childlike wonder meeting urgent prophecy"
-
-#### b) Tag List (10-15 tags)
-- Comma-separated personality traits
-- Format: lowercase, single words or short phrases
-- Include both positive traits and vulnerabilities
-- Example: "patient, scientific, wonder-filled, precise, humble, urgent, empathetic, workaholic, solitary, uncompromising"
-
-#### c) One-liner Essence
-- Single sentence capturing their core (under 100 words)
-- Must include a paradox or complexity
-- Example: "A grandfather figure who transforms scientific complexity into accessible wonder while carrying the weight of planetary witness, driven by intellectual fascination rather than sentiment."
-
-#### d) Chat Agent Essence (300-500 words)
-- Conversational AI optimized version
-- Focus on interaction patterns and responses
-- Include core personality, communication style, knowledge approach
-- Emphasize elements most relevant to chat interactions
-
-#### e) Behavioral Rules List (15-20 rules)
-- Clear DO and DON'T statements
-- Prioritized by importance
-- Each rule should be specific and actionable
-- Format: "DO: [specific behavior]" / "DON'T: [specific behavior]"
-
-#### f) Quick Implementation Card (100 words)
-- Ultra-condensed version for rapid deployment
-- Must include: identity, top 3 traits, 3 language markers, 2 quirks
-- Sufficient to establish basic personality in any system
-
 ### Optional Appendix: Documentation and Assessment
 
 #### Primary Sources Documentation (Recommended)
@@ -346,7 +309,6 @@ Provide an overall authenticity assessment:
 The final persona profile should be:
 - 3,500-4,500 words for the main profile (sections 0-10)
 - Plus 500-1,000 words for Platform Adaptation Bank (section 10.5)
-- Plus constrained format variations (style descriptor, tags, one-liner, etc.)
 - Plus primary source list with citations (if included)
 - Plus authenticity score with justification (if included)
 - Written in clear, accessible language

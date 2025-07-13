@@ -17,9 +17,6 @@ Gemini is used for both persona generation and synthesis tasks with different te
 
 2. **Synthesis Tasks** (Temperature: 0.3)
    - Used for combining multiple AI outputs
-   - Used for generating condensed versions
-   - Used for creating constrained formats
-   - Used for platform-specific adaptations
    - Lower temperature ensures more predictable, consistent synthesis
 
 ### Other AI Providers
@@ -66,9 +63,7 @@ func (c *Client) GeneratePersonaSynthesis(ctx context.Context, prompt string) (s
 All these tasks use the lower temperature (0.3):
 
 1. **Combining Personas**: Merging outputs from Claude, Gemini, Grok, and GPT-4
-2. **Creating Prompt-Ready Version**: Condensing to 500-1000 words
-3. **Generating Constrained Formats**: Tweet-length, one-liners, etc.
-4. **Platform Adaptations**: Customizing for ChatGPT, Discord, LinkedIn, etc.
+2. **Regenerating with Feedback**: Processing user feedback
 
 ## Future Considerations
 

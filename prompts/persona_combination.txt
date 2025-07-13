@@ -53,7 +53,6 @@ The synthesized persona must follow this exact structure:
 - **Section 0**: Core Essence (Priority Elements)
 - **Sections 1-10**: Core persona profile (2,500-3,500 words total)
 - **Section 10.5**: Platform Adaptation Bank
-- **Section 11**: Six constrained format versions
 - **Section 12**: Voice synthesis parameters
 - **Section 13**: Quick Reference Extraction
 - **Optional Appendix**: Combined source documentation and authenticity assessment
@@ -212,43 +211,6 @@ The synthesized persona must follow this exact structure:
 - Closing phrases: [10+ examples with context]
 - Signature expressions: [20+ examples with usage notes]
 
-### 11. Constrained Formats
-[Synthesize the best elements from all versions to create unified formats:]
-
-#### a) Style Descriptor (50-200 characters)
-- Combine the most evocative elements from all versions
-- Ensure captures consensus essence identified across all versions
-- Format: "adjective + role/identity + key trait + emotional tone + signature element"
-
-#### b) Tag List (10-15 tags)
-- Merge all unique tags from the versions, eliminating duplicates
-- Prioritize tags that appear in multiple versions
-- Include both strengths and vulnerabilities
-- Format: lowercase, single words or short phrases
-
-#### c) One-liner Essence
-- Synthesize the best elements from all versions or create new unified version
-- Must reflect consensus view from all personas
-- Include a paradox or complexity
-- Under 100 words
-
-#### d) Chat Agent Essence (300-500 words)
-- Combine interaction patterns from all versions
-- Focus on elements that appear consistently
-- Include core personality, communication style, knowledge approach
-- Optimize for conversational AI use
-
-#### e) Behavioral Rules List (15-20 rules)
-- Consolidate DO and DON'T statements from all versions
-- Prioritize rules that appear across multiple versions
-- Each rule should be specific and actionable
-- Format: "DO: [specific behavior]" / "DON'T: [specific behavior]"
-
-#### f) Quick Implementation Card (100 words)
-- Ultra-condensed synthesis capturing universal elements
-- Must include: identity, top 3 traits (consensus), 3 language markers, 2 quirks
-- Elements that work across all platforms
-
 ### 12. Voice Synthesis Parameters
 <!-- VOICE-SPECIFIC START -->
 [Combine best parameters from all versions:]
@@ -352,7 +314,6 @@ Here is the synthesized persona profile of [Name], created by consolidating the 
 ## Output Summary
 - Section 0: Core Essence (Priority Elements)
 - Sections 1-10: Core persona profile (2,500-3,500 words total)
-- Section 11: Four constrained format versions
 ...
 ```
 

@@ -83,9 +83,6 @@ personas/[name]/
 │   ├── gpt.md
 │   └── user_supplied.md  ← User's persona stored here
 ├── synthesized.md        ← Combines all 5 inputs
-├── prompt_ready.md
-├── constrained_formats.md
-└── platforms/
 ```
 
 ## Important Notes

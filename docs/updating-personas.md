@@ -9,7 +9,7 @@ Studio now supports updating existing personas with user-provided content. This 
 1. **Submit Update**: Create a GitHub issue with your updated persona
 2. **Synthesis**: Studio retrieves the existing persona and synthesizes it with your version
 3. **Pull Request**: A PR is created with only the synthesized version
-4. **Simplified Process**: No platform adaptations or constrained formats are generated
+4. **Simplified Process**: Only the synthesized version is updated
 
 ## Creating an Update Request
 
@@ -69,9 +69,6 @@ When you submit an update:
 
 ❌ **Not Updated**:
 - Raw AI provider outputs
-- Platform adaptations
-- Constrained formats
-- Prompt-ready version
 
 ## Benefits
 
