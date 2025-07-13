@@ -83,8 +83,14 @@ func (g *Generator) ProcessIssue(ctx context.Context, issue *github.Issue) (*mod
 		g.logger.Warnf("Failed to store combined persona: %v", err)
 	}
 
-	// Extract persona name
-	personaName := g.extractPersonaName(finalPersona)
+	// Use persona name from issue title if available, otherwise try to extract
+	personaName := "AI-Generated Persona"
+	if issue.Title != nil && *issue.Title != "" {
+		personaName = *issue.Title
+	} else {
+		// Fallback to extraction if no title
+		personaName = g.extractPersonaName(finalPersona)
+	}
 
 	return &models.Persona{
 		Name:        personaName,
@@ -133,8 +139,8 @@ Please create an improved version that addresses all the feedback points above.`
 		g.logger.Warnf("Failed to store feedback artifacts: %v", err)
 	}
 
-	// Combine all responses into final persona
-	finalPersona, err := g.combinePersonas(ctx, responses)
+	// Combine all responses with feedback prompt
+	finalPersona, err := g.combinePersonasWithFeedback(ctx, responses, feedback)
 	if err != nil {
 		return nil, fmt.Errorf("failed to combine feedback personas: %w", err)
 	}
@@ -144,8 +150,14 @@ Please create an improved version that addresses all the feedback points above.`
 		g.logger.Warnf("Failed to store combined feedback persona: %v", err)
 	}
 
-	// Extract persona name
-	personaName := g.extractPersonaName(finalPersona)
+	// Use persona name from issue title if available, otherwise try to extract
+	personaName := "AI-Generated Persona"
+	if issue.Title != nil && *issue.Title != "" {
+		personaName = *issue.Title
+	} else {
+		// Fallback to extraction if no title
+		personaName = g.extractPersonaName(finalPersona)
+	}
 
 	return &models.Persona{
 		Name:        personaName,
@@ -254,7 +266,14 @@ Format as a well-structured Markdown document.`, issueContent)
 }
 
 func (g *Generator) combinePersonas(ctx context.Context, responses []ProviderResponse) (string, error) {
+	return g.combinePersonasWithUser(ctx, responses, "")
+}
+
+func (g *Generator) combinePersonasWithUser(ctx context.Context, responses []ProviderResponse, userPersona string) (string, error) {
 	g.logger.Info("Combining personas using Gemini")
+	if userPersona != "" {
+		g.logger.Info("Including user-supplied persona in synthesis")
+	}
 
 	// Filter successful responses
 	var successfulResponses []ProviderResponse
@@ -268,8 +287,8 @@ func (g *Generator) combinePersonas(ctx context.Context, responses []ProviderRes
 		return "", fmt.Errorf("no successful persona responses to combine")
 	}
 
-	if len(successfulResponses) == 1 {
-		g.logger.Info("Only one successful response, using it directly")
+	if len(successfulResponses) == 1 && userPersona == "" {
+		g.logger.Info("Only one successful response and no user persona, using it directly")
 		return successfulResponses[0].Content, nil
 	}
 
@@ -280,19 +299,37 @@ func (g *Generator) combinePersonas(ctx context.Context, responses []ProviderRes
 		combinationPrompt = g.getDefaultCombinationPrompt()
 	}
 
+	// If user persona exists, update the prompt to include it
+	if userPersona != "" {
+		combinationPrompt = strings.Replace(combinationPrompt,
+			"INPUT PERSONAS TO COMBINE:",
+			"INPUT PERSONAS TO COMBINE (including user-supplied version):",
+			1)
+	}
+
 	finalPrompt := combinationPrompt
 
 	// Build the personas section
-	for i, resp := range successfulResponses {
-		finalPrompt = strings.ReplaceAll(finalPrompt, fmt.Sprintf("{{PERSONA#%d}}", i+1), fmt.Sprintf("%s\n<<<\n%s\n>>>", resp.Provider, resp.Content))
+	var personaCount int
+	var personas []string
+	for _, resp := range successfulResponses {
+		if resp.Content == "" {
+			continue
+		}
+		personaCount++
+		personas = append(personas, fmt.Sprintf("Persona %d: %s\n<<<\n%s\n>>>", personaCount, resp.Provider, resp.Content))
 	}
 
-	for n := 1; n <= 4; n++ {
-		finalPrompt = strings.ReplaceAll(finalPrompt, fmt.Sprintf("{{PERSONA#%d}}", n), "<<< - >>>")
+	// Add user persona if provided
+	if userPersona != "" {
+		personaCount++
+		personas = append(personas, fmt.Sprintf("Persona %d: %s\n<<<\n%s\n>>>", personaCount, "User-Supplied", userPersona))
 	}
 
-	// Use Gemini to combine
-	combinedPersona, err := g.gemini.GeneratePersona(ctx, finalPrompt)
+	finalPrompt = strings.ReplaceAll(finalPrompt, "{{PERSONAS}}", strings.Join(personas, "\n\n"))
+
+	// Use Gemini with lower temperature for synthesis
+	combinedPersona, err := g.gemini.GeneratePersonaSynthesis(ctx, finalPrompt)
 	if err != nil {
 		g.logger.Warnf("Failed to combine with Gemini, using best individual response: %v", err)
 		// Fallback to the longest response as it's likely most complete
@@ -388,6 +425,8 @@ func (g *Generator) storeCombinedPersonaWithSuffix(issueNumber int, persona, suf
 	return nil
 }
 
+// extractPersonaName attempts to extract a persona name from generated content
+// This is only used as a fallback when the issue title is not available
 func (g *Generator) extractPersonaName(content string) string {
 	patterns := []string{
 		`#\s*(?:Persona:|Name:)\s*(.+)`,
@@ -444,6 +483,91 @@ func (g *Generator) formatFeedback(feedback []string) string {
 		formatted += fmt.Sprintf("%d. %s\n", i+1, comment)
 	}
 	return formatted
+}
+
+func (g *Generator) combinePersonasWithFeedback(ctx context.Context, responses []ProviderResponse, feedback []string) (string, error) {
+	g.logger.Info("Combining personas with feedback using Gemini")
+
+	// Filter successful responses
+	var successfulResponses []ProviderResponse
+	for _, resp := range responses {
+		if resp.Error == nil {
+			successfulResponses = append(successfulResponses, resp)
+		}
+	}
+
+	if len(successfulResponses) == 0 {
+		return "", fmt.Errorf("no successful persona responses to combine")
+	}
+
+	if len(successfulResponses) == 1 {
+		g.logger.Info("Only one successful response, using it directly")
+		return successfulResponses[0].Content, nil
+	}
+
+	// Load feedback combination prompt template
+	feedbackPrompt, err := g.loadFeedbackCombinationPrompt()
+	if err != nil {
+		g.logger.Warnf("Failed to load feedback combination prompt, using fallback: %v", err)
+		feedbackPrompt = g.getDefaultFeedbackCombinationPrompt()
+	}
+
+	// Replace feedback placeholder
+	feedbackSection := g.formatFeedback(feedback)
+	feedbackPrompt = strings.Replace(feedbackPrompt, "{{FEEDBACK}}", feedbackSection, 1)
+
+	// Build the personas section
+	var personaCount int
+	var personas []string
+	for _, resp := range successfulResponses {
+		if resp.Content == "" {
+			continue
+		}
+		personaCount++
+		personas = append(personas, fmt.Sprintf("Persona %d: %s\n<<<\n%s\n>>>", personaCount, resp.Provider, resp.Content))
+	}
+
+	finalPrompt := strings.ReplaceAll(feedbackPrompt, "{{PERSONAS}}", strings.Join(personas, "\n\n"))
+
+	// Use Gemini with lower temperature for synthesis
+	combinedPersona, err := g.gemini.GeneratePersonaSynthesis(ctx, finalPrompt)
+	if err != nil {
+		g.logger.Warnf("Failed to combine with Gemini, using best individual response: %v", err)
+		// Fallback to the longest response as it's likely most complete
+		bestResponse := successfulResponses[0]
+		for _, resp := range successfulResponses[1:] {
+			if len(resp.Content) > len(bestResponse.Content) {
+				bestResponse = resp
+			}
+		}
+		return bestResponse.Content, nil
+	}
+
+	return combinedPersona, nil
+}
+
+func (g *Generator) loadFeedbackCombinationPrompt() (string, error) {
+	data, err := os.ReadFile("prompts/persona_combination_feedback.txt")
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+func (g *Generator) getDefaultFeedbackCombinationPrompt() string {
+	return `You are tasked with creating an improved persona by analyzing and combining the following regenerated persona profiles. Each profile was created after incorporating user feedback.
+
+Start your response immediately with the persona content using proper Markdown formatting. Do NOT include any preambles or meta-commentary.
+
+USER FEEDBACK TO ADDRESS:
+
+{{FEEDBACK}}
+
+INPUT PERSONAS TO COMBINE:
+
+{{PERSONAS}}
+
+Create a comprehensive, unified persona that represents the best synthesis of all the above profiles while ensuring all feedback points are addressed. Start directly with a persona title and content.`
 }
 
 func getStringValue(s *string) string {

@@ -1,0 +1,14 @@
+Adapt the following synthesized persona specifically for use on {{PLATFORM}}. Consider:
+
+1. Platform-specific constraints and features
+2. Optimal formatting for the platform
+3. Relevant use cases and interactions
+4. Platform culture and expectations
+5. Technical limitations or opportunities
+
+Start your response immediately with the adapted persona. Do NOT include any preambles.
+
+SYNTHESIZED PERSONA TO ADAPT:
+{{SYNTHESIZED_PERSONA}}
+
+Create the {{PLATFORM}} adaptation now:

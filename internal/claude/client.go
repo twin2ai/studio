@@ -48,7 +48,7 @@ func NewClient(apiKey, model string, logger *logrus.Logger) *Client {
 		apiKey: apiKey,
 		model:  model,
 		httpClient: &http.Client{
-			Timeout: 120 * time.Second,
+			Timeout: 600 * time.Second, // 10 minutes, matching other providers
 		},
 		logger:     logger,
 		promptPath: "prompts/persona_generation.txt",
@@ -152,7 +152,7 @@ func (c *Client) GeneratePersona(ctx context.Context, issueContent string, templ
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("x-api-key", c.apiKey)
-	req.Header.Set("anthropic-version", "2024-10-22")
+	req.Header.Set("anthropic-version", "2023-06-01")
 	
 	c.logger.Info("Sending request to Claude API...")
 	c.logger.Debugf("Request URL: %s", anthropicAPIURL)

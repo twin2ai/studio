@@ -1,0 +1,15 @@
+Create multiple constrained format versions of the following synthesized persona. Generate each of these formats:
+
+1. **One-Liner** (max 100 characters): A single sentence capturing the essence
+2. **Tweet-Length** (max 280 characters): Core identity in tweet format
+3. **Elevator Pitch** (30 seconds / ~75 words): Quick introduction
+4. **Short Bio** (100-150 words): Brief professional biography
+5. **Executive Summary** (200-300 words): Key points for quick reference
+6. **Single Paragraph** (150-200 words): Flowing narrative description
+
+Format your response as a Markdown document with clear headers for each version. Start immediately with the content.
+
+SYNTHESIZED PERSONA:
+{{SYNTHESIZED_PERSONA}}
+
+Generate the constrained versions now:

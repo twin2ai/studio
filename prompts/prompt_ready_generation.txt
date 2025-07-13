@@ -1,0 +1,14 @@
+Create a prompt-ready condensed version of the following synthesized persona in 500-1000 words. This version should:
+
+1. Capture the essential characteristics and behaviors
+2. Be immediately usable in AI prompts
+3. Focus on the most distinctive and important traits
+4. Include key speaking patterns, values, and expertise
+5. Be formatted for easy copy-paste into prompts
+
+Start your response immediately with the condensed persona content. Do NOT include any preambles or meta-commentary.
+
+SYNTHESIZED PERSONA:
+{{SYNTHESIZED_PERSONA}}
+
+Create the condensed version now:

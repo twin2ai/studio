@@ -108,14 +108,127 @@ func (p *Pipeline) Start(ctx context.Context) error {
 func (p *Pipeline) run(ctx context.Context) error {
 	p.logger.Info("Running pipeline iteration")
 
-	// Process new issues first
-	if err := p.processNewIssues(ctx); err != nil {
-		p.logger.Errorf("Failed to process new issues: %v", err)
+	// Process update requests first
+	if err := p.processUpdateRequests(ctx); err != nil {
+		p.logger.Errorf("Failed to process update requests: %v", err)
 	}
 
-	// Process PR comments for existing personas
-	if err := p.processPRComments(ctx); err != nil {
-		p.logger.Errorf("Failed to process PR comments: %v", err)
+	// Use structured pipeline by default for new personas
+	if err := p.runWithStructure(ctx); err != nil {
+		p.logger.Errorf("Structured pipeline run failed: %v", err)
+	}
+
+	return nil
+}
+
+func (p *Pipeline) processUpdateRequests(ctx context.Context) error {
+	// Get issues tagged for persona updates
+	opts := &github.IssueListByRepoOptions{
+		State:  "open",
+		Labels: []string{"update-persona"},
+	}
+
+	issues, _, err := p.github.GetClient().Issues.ListByRepo(ctx, p.config.GitHub.Owner, p.config.GitHub.Repo, opts)
+	if err != nil {
+		return fmt.Errorf("failed to fetch update issues: %w", err)
+	}
+
+	p.logger.Infof("Found %d update requests", len(issues))
+
+	for _, issue := range issues {
+		if issue.Number == nil {
+			continue
+		}
+
+		// Skip if already processed
+		if p.processed[*issue.Number] {
+			p.logger.Infof("Update issue #%d already processed, skipping", *issue.Number)
+			continue
+		}
+
+		// Parse update request
+		request, err := ParseUpdateRequest(issue)
+		if err != nil {
+			p.logger.Errorf("Failed to parse update request from issue #%d: %v", *issue.Number, err)
+			
+			// Comment on the issue with error
+			errorComment := fmt.Sprintf(`❌ **Unable to Process Update Request**
+
+%s
+
+**Required Format:**
+- Title: "Update Persona: [Existing Persona Name]"
+- Body: Your updated persona content (optionally wrapped in [[[ ]]] markers)
+
+Please ensure the persona name matches an existing persona exactly.
+
+---
+*[Studio](https://github.com/twin2ai/studio) - Multi-AI Persona Generation Pipeline*`, err.Error())
+
+			_, _, commentErr := p.github.GetClient().Issues.CreateComment(
+				ctx, p.config.GitHub.Owner, p.config.GitHub.Repo, *issue.Number,
+				&github.IssueComment{Body: github.String(errorComment)})
+			if commentErr != nil {
+				p.logger.Warnf("Failed to comment error on issue #%d: %v", *issue.Number, commentErr)
+			}
+
+			// Mark as processed to avoid repeated error comments
+			p.processed[*issue.Number] = true
+			if err := p.saveProcessedIssue(*issue.Number); err != nil {
+				p.logger.Warnf("Failed to save processed issue: %v", err)
+			}
+			continue
+		}
+
+		// Process the update
+		if err := p.ProcessPersonaUpdate(ctx, *request); err != nil {
+			p.logger.Errorf("Failed to process persona update: %v", err)
+			
+			// Comment on the issue with error
+			errorComment := fmt.Sprintf(`❌ **Failed to Update Persona**
+
+%s
+
+Please check that:
+- The persona name matches an existing persona
+- The repository is accessible
+- Your content is valid
+
+---
+*[Studio](https://github.com/twin2ai/studio) - Multi-AI Persona Generation Pipeline*`, err.Error())
+
+			_, _, commentErr := p.github.GetClient().Issues.CreateComment(
+				ctx, p.config.GitHub.Owner, p.config.GitHub.Repo, *issue.Number,
+				&github.IssueComment{Body: github.String(errorComment)})
+			if commentErr != nil {
+				p.logger.Warnf("Failed to comment error on issue #%d: %v", *issue.Number, commentErr)
+			}
+		} else {
+			// Success comment
+			successComment := fmt.Sprintf(`✅ **Persona Update Submitted**
+
+Successfully synthesized your update with the existing persona for **%s**.
+
+A pull request has been created with the updated version. The synthesis combines your input with the existing persona to create an improved version.
+
+**Note**: Only the synthesized version is updated. Platform adaptations and constrained formats are not regenerated for updates.
+
+---
+*[Studio](https://github.com/twin2ai/studio) - Multi-AI Persona Generation Pipeline*`, request.PersonaName)
+
+			_, _, commentErr := p.github.GetClient().Issues.CreateComment(
+				ctx, p.config.GitHub.Owner, p.config.GitHub.Repo, *issue.Number,
+				&github.IssueComment{Body: github.String(successComment)})
+			if commentErr != nil {
+				p.logger.Warnf("Failed to comment success on issue #%d: %v", *issue.Number, commentErr)
+			}
+		}
+
+		// Mark as processed
+		p.processed[*issue.Number] = true
+		if err := p.saveProcessedIssue(*issue.Number); err != nil {
+			p.logger.Warnf("Failed to save processed issue: %v", err)
+		}
 	}
 
 	return nil

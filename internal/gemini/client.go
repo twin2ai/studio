@@ -55,6 +55,17 @@ func NewClient(apiKey, model string, logger *logrus.Logger) *Client {
 }
 
 func (c *Client) GeneratePersona(ctx context.Context, prompt string) (string, error) {
+	// Use standard temperature for normal persona generation
+	return c.generateWithTemperature(ctx, prompt, 0.7)
+}
+
+// GeneratePersonaSynthesis generates content with lower temperature for more predictable synthesis
+func (c *Client) GeneratePersonaSynthesis(ctx context.Context, prompt string) (string, error) {
+	// Use lower temperature (0.3) for synthesis to get more consistent, predictable output
+	return c.generateWithTemperature(ctx, prompt, 0.3)
+}
+
+func (c *Client) generateWithTemperature(ctx context.Context, prompt string, temperature float64) (string, error) {
 	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s", c.model, c.apiKey)
 
 	request := Request{
@@ -67,9 +78,11 @@ func (c *Client) GeneratePersona(ctx context.Context, prompt string) (string, er
 		},
 		GenerationConfig: GenerationConfig{
 			MaxOutputTokens: 20000,
-			Temperature:     0.7,
+			Temperature:     temperature,
 		},
 	}
+
+	c.logger.Debugf("Gemini request with temperature %.1f for prompt length: %d", temperature, len(prompt))
 
 	body, err := json.Marshal(request)
 	if err != nil {
