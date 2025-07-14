@@ -153,7 +153,7 @@ func (m *Monitor) checkGitHubPersonaForTriggers(ctx context.Context, personaName
 	// Normalize persona name for GitHub path
 	folderName := strings.ToLower(strings.ReplaceAll(personaName, " ", "_"))
 	folderName = strings.ReplaceAll(folderName, "/", "_")
-	
+
 	// Check if synthesized.md exists in GitHub
 	synthesizedPath := fmt.Sprintf("personas/%s/synthesized.md", folderName)
 	if !m.githubClient.FileExists(ctx, synthesizedPath) {
@@ -188,7 +188,7 @@ func (m *Monitor) checkGitHubPersonaForTriggers(ctx context.Context, personaName
 		triggerReason = "synthesized.md file was modified in GitHub"
 		// Add all prompt-related assets to regeneration queue
 		assetTypes = append(assetTypes, AssetTypePrompts, AssetTypePlatformPrompts, AssetTypeVariationPrompts)
-		m.logger.Infof("GitHub synthesized.md for %s modified at %v (last generation: %v)", 
+		m.logger.Infof("GitHub synthesized.md for %s modified at %v (last generation: %v)",
 			personaName, synthesizedModTime, status.LastAssetsGeneration)
 	} else if len(status.PendingAssets) > 0 {
 		triggerReason = "pending assets detected"

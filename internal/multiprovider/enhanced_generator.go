@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/google/go-github/v57/github"
+	"github.com/twin2ai/studio/internal/assets"
 	gh "github.com/twin2ai/studio/internal/github"
 	"github.com/twin2ai/studio/pkg/models"
 )
-
 
 // ProcessIssueWithStructure processes an issue and generates a complete persona package
 func (g *Generator) ProcessIssueWithStructure(ctx context.Context, issue *github.Issue) (*models.Persona, *gh.PersonaFiles, error) {
@@ -78,16 +79,26 @@ func (g *Generator) ProcessIssueWithStructureAndUser(ctx context.Context, issue 
 	// Use persona name from issue title
 	personaName := *issue.Title
 
-
+	// Create asset status
+	assetStatus := &assets.AssetStatus{
+		PersonaName:           personaName,
+		LastSynthesizedUpdate: time.Now(),
+		LastAssetsGeneration:  time.Time{}, // Zero time means never generated
+		PendingAssets:         []string{},
+		GeneratedAssets:       []string{},
+		AssetGenerationFlags:  make(map[string]bool),
+		Metadata:              make(map[string]string),
+	}
 
 	// Create PersonaFiles structure
 	files := &gh.PersonaFiles{
-		ClaudeRaw:           claudeRaw,
-		GeminiRaw:           geminiRaw,
-		GrokRaw:             grokRaw,
-		GPTRaw:              gptRaw,
-		UserRaw:             userPersona,
-		FullSynthesis:       fullSynthesis,
+		ClaudeRaw:     claudeRaw,
+		GeminiRaw:     geminiRaw,
+		GrokRaw:       grokRaw,
+		GPTRaw:        gptRaw,
+		UserRaw:       userPersona,
+		FullSynthesis: fullSynthesis,
+		AssetStatus:   assetStatus,
 	}
 
 	// Create Persona model
@@ -108,10 +119,6 @@ func (g *Generator) loadPromptFromFile(filename string) (string, error) {
 	}
 	return string(data), nil
 }
-
-
-
-
 
 // UpdatePersonaWithUserInput updates an existing persona with user-provided content
 func (g *Generator) UpdatePersonaWithUserInput(ctx context.Context, personaName string, existingPersona string, userPersona string) (string, error) {
@@ -142,7 +149,7 @@ Please create a synthesized version that:
 Start your response immediately with the synthesized persona content using proper Markdown formatting. Do NOT include any preambles or meta-commentary.`, existingPersona, userPersona)
 
 	// Use Gemini with lower temperature for synthesis
-	synthesized, err := g.gemini.GeneratePersonaSynthesis(ctx, combinationPrompt)
+	synthesized, err := g.gemini.GenerateSynthesis(ctx, combinationPrompt)
 	if err != nil {
 		return "", fmt.Errorf("failed to synthesize personas: %w", err)
 	}
@@ -225,16 +232,26 @@ Please create an improved version that addresses all the feedback points above.`
 	// Use persona name from issue title
 	personaName := *issue.Title
 
-
+	// Create asset status for regenerated persona
+	assetStatus := &assets.AssetStatus{
+		PersonaName:           personaName,
+		LastSynthesizedUpdate: time.Now(),
+		LastAssetsGeneration:  time.Time{}, // Zero time means never generated
+		PendingAssets:         []string{},
+		GeneratedAssets:       []string{},
+		AssetGenerationFlags:  make(map[string]bool),
+		Metadata:              map[string]string{"regenerated": "true"},
+	}
 
 	// Create PersonaFiles structure
 	files := &gh.PersonaFiles{
-		ClaudeRaw:           claudeRaw,
-		GeminiRaw:           geminiRaw,
-		GrokRaw:             grokRaw,
-		GPTRaw:              gptRaw,
-		UserRaw:             "", // No user persona in regeneration
-		FullSynthesis:       fullSynthesis,
+		ClaudeRaw:     claudeRaw,
+		GeminiRaw:     geminiRaw,
+		GrokRaw:       grokRaw,
+		GPTRaw:        gptRaw,
+		UserRaw:       "", // No user persona in regeneration
+		FullSynthesis: fullSynthesis,
+		AssetStatus:   assetStatus,
 	}
 
 	// Create Persona model

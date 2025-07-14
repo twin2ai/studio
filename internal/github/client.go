@@ -408,8 +408,123 @@ func (c *Client) FileExists(ctx context.Context, filePath string) bool {
 
 	_, _, _, err := c.client.Repositories.GetContents(
 		ctx, c.personasOwner, c.personasRepo, filePath, nil)
-	
+
 	exists := err == nil
 	c.logger.Debugf("File %s exists: %v", filePath, exists)
 	return exists
+}
+
+// CreateSynthesisUpdatePR creates a PR to update synthesized.md from raw outputs
+func (c *Client) CreateSynthesisUpdatePR(ctx context.Context, personaName, folderName, synthesizedContent string) (*github.PullRequest, error) {
+	// Create branch name for synthesis update
+	sanitizedName := strings.ToLower(strings.ReplaceAll(personaName, " ", "-"))
+	sanitizedName = strings.ReplaceAll(sanitizedName, "/", "-")
+	timestamp := fmt.Sprintf("%d", time.Now().Unix())
+	branchName := fmt.Sprintf("synthesize/%s-%s", sanitizedName, timestamp)
+
+	// Get default branch of personas repo
+	repo, _, err := c.client.Repositories.Get(ctx, c.personasOwner, c.personasRepo)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get personas repo: %w", err)
+	}
+	defaultBranch := repo.GetDefaultBranch()
+
+	// Get base branch ref
+	baseRef, _, err := c.client.Git.GetRef(ctx, c.personasOwner, c.personasRepo, "refs/heads/"+defaultBranch)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get base ref: %w", err)
+	}
+
+	// Create new branch
+	newRef := &github.Reference{
+		Ref: github.String("refs/heads/" + branchName),
+		Object: &github.GitObject{
+			SHA: baseRef.Object.SHA,
+		},
+	}
+
+	_, _, err = c.client.Git.CreateRef(ctx, c.personasOwner, c.personasRepo, newRef)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create branch: %w", err)
+	}
+
+	// File path for synthesized.md
+	filePath := fmt.Sprintf("personas/%s/synthesized.md", folderName)
+
+	// Update the file
+	fileOpts := &github.RepositoryContentFileOptions{
+		Message: github.String(fmt.Sprintf("Regenerate synthesized.md for %s", personaName)),
+		Content: []byte(synthesizedContent),
+		Branch:  github.String(branchName),
+	}
+
+	// Get existing file SHA
+	existingFile, _, _, err := c.client.Repositories.GetContents(
+		ctx, c.personasOwner, c.personasRepo, filePath,
+		&github.RepositoryContentGetOptions{Ref: defaultBranch})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get existing synthesized.md: %w", err)
+	}
+
+	if existingFile != nil {
+		fileOpts.SHA = existingFile.SHA
+	}
+
+	// Update the file
+	_, _, err = c.client.Repositories.UpdateFile(
+		ctx, c.personasOwner, c.personasRepo, filePath, fileOpts)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update file: %w", err)
+	}
+
+	// Create pull request
+	prBody := fmt.Sprintf(`This PR regenerates the synthesized.md for: **%s**
+
+## 🔄 Regeneration Details
+Synthesized.md has been regenerated from the existing raw AI outputs.
+
+## 📊 Source Files Used
+- **Claude**: personas/%s/raw/claude.md
+- **Gemini**: personas/%s/raw/gemini.md
+- **Grok**: personas/%s/raw/grok.md
+- **GPT-4**: personas/%s/raw/gpt.md
+
+## 🧬 Synthesis Process
+1. Retrieved all raw AI outputs from the repository
+2. Applied the standard persona combination prompt
+3. Used Gemini to synthesize a comprehensive unified persona
+4. Temperature: 0.3 for consistent synthesis
+
+## 📝 Changes
+- Only synthesized.md is updated
+- Raw files remain unchanged
+- This preserves the original AI outputs while refreshing the synthesis
+
+---
+*This is an automated PR created by [Studio](https://github.com/twin2ai/studio) synthesize command*`,
+		personaName, folderName, folderName, folderName, folderName)
+
+	pr := &github.NewPullRequest{
+		Title: github.String(fmt.Sprintf("Regenerate synthesized.md for %s", personaName)),
+		Body:  github.String(prBody),
+		Head:  github.String(branchName),
+		Base:  github.String(defaultBranch),
+	}
+
+	pullRequest, _, err := c.client.PullRequests.Create(
+		ctx, c.personasOwner, c.personasRepo, pr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create PR: %w", err)
+	}
+
+	// Add labels to PR
+	_, _, err = c.client.Issues.AddLabelsToIssue(
+		ctx, c.personasOwner, c.personasRepo,
+		*pullRequest.Number, []string{"persona", "synthesis", "regeneration", "studio"})
+	if err != nil {
+		c.logger.Warnf("Failed to add labels to PR: %v", err)
+	}
+
+	return pullRequest, nil
 }

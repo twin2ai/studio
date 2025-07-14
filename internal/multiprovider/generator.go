@@ -329,7 +329,7 @@ func (g *Generator) combinePersonasWithUser(ctx context.Context, responses []Pro
 	finalPrompt = strings.ReplaceAll(finalPrompt, "{{PERSONAS}}", strings.Join(personas, "\n\n"))
 
 	// Use Gemini with lower temperature for synthesis
-	combinedPersona, err := g.gemini.GeneratePersonaSynthesis(ctx, finalPrompt)
+	combinedPersona, err := g.gemini.GenerateSynthesis(ctx, finalPrompt)
 	if err != nil {
 		g.logger.Warnf("Failed to combine with Gemini, using best individual response: %v", err)
 		// Fallback to the longest response as it's likely most complete
@@ -530,7 +530,7 @@ func (g *Generator) combinePersonasWithFeedback(ctx context.Context, responses [
 	finalPrompt := strings.ReplaceAll(feedbackPrompt, "{{PERSONAS}}", strings.Join(personas, "\n\n"))
 
 	// Use Gemini with lower temperature for synthesis
-	combinedPersona, err := g.gemini.GeneratePersonaSynthesis(ctx, finalPrompt)
+	combinedPersona, err := g.gemini.GenerateSynthesis(ctx, finalPrompt)
 	if err != nil {
 		g.logger.Warnf("Failed to combine with Gemini, using best individual response: %v", err)
 		// Fallback to the longest response as it's likely most complete

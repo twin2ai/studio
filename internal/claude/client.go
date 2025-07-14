@@ -96,7 +96,7 @@ Format the output as a well-structured Markdown document suitable for documentat
 
 func (c *Client) GeneratePersona(ctx context.Context, issueContent string, template string) (string, error) {
 	c.logger.Info("Starting Claude persona generation")
-	
+
 	// Load prompt template
 	promptTemplate, err := c.loadPromptTemplate()
 	if err != nil {
@@ -119,7 +119,7 @@ func (c *Client) GeneratePersona(ctx context.Context, issueContent string, templ
 
 	c.logger.Infof("Using Claude model: %s", c.model)
 	c.logger.Debugf("Prompt length: %d characters", len(prompt))
-	
+
 	// Check if prompt is too large
 	if len(prompt) > 50000 {
 		c.logger.Warnf("Large prompt detected (%d chars), this might cause API issues", len(prompt))
@@ -153,21 +153,21 @@ func (c *Client) GeneratePersona(ctx context.Context, issueContent string, templ
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("x-api-key", c.apiKey)
 	req.Header.Set("anthropic-version", "2023-06-01")
-	
+
 	c.logger.Info("Sending request to Claude API...")
 	c.logger.Debugf("Request URL: %s", anthropicAPIURL)
-	c.logger.Debugf("Request headers: Content-Type=%s, x-api-key=%s..., anthropic-version=%s", 
-		req.Header.Get("Content-Type"), 
-		c.apiKey[:min(10, len(c.apiKey))]+"...", 
+	c.logger.Debugf("Request headers: Content-Type=%s, x-api-key=%s..., anthropic-version=%s",
+		req.Header.Get("Content-Type"),
+		c.apiKey[:min(10, len(c.apiKey))]+"...",
 		req.Header.Get("anthropic-version"))
 
 	// Add timeout context for the request
 	requestStart := time.Now()
 	resp, err := c.httpClient.Do(req)
 	requestDuration := time.Since(requestStart)
-	
+
 	c.logger.Infof("HTTP request completed in %v", requestDuration)
-	
+
 	if err != nil {
 		c.logger.Errorf("HTTP request failed after %v: %v", requestDuration, err)
 		return "", fmt.Errorf("failed to send request: %w", err)
@@ -198,7 +198,7 @@ func (c *Client) GeneratePersona(ctx context.Context, issueContent string, templ
 	}
 
 	c.logger.Infof("Response contains %d content items", len(response.Content))
-	
+
 	if len(response.Content) == 0 {
 		c.logger.Error("Empty content array in Claude response")
 		c.logger.Debugf("Full response: %+v", response)

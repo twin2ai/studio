@@ -32,7 +32,7 @@ func ParsePersonaIssue(issue *github.Issue) (*ParsedIssue, error) {
 	var detailedContent string
 	var userPersona string
 	var rawContent string
-	
+
 	if issue.Body != nil && *issue.Body != "" {
 		rawContent = *issue.Body
 		// Try to extract content between <<< >>>
@@ -43,7 +43,7 @@ func ParsePersonaIssue(issue *github.Issue) (*ParsedIssue, error) {
 		} else {
 			detailedContent = content
 		}
-		
+
 		// Try to extract user-supplied persona between [[[ ]]]
 		userContent, _ := extractUserPersona(*issue.Body)
 		userPersona = userContent
@@ -62,7 +62,7 @@ func extractFullNameFromTitle(title string) (string, error) {
 	// Match pattern "Create Persona: [NAME]" (case insensitive)
 	re := regexp.MustCompile(`(?i)create\s+persona:\s*(.+)`)
 	matches := re.FindStringSubmatch(title)
-	
+
 	if len(matches) < 2 {
 		return "", fmt.Errorf("title must follow format 'Create Persona: [Full Name]'")
 	}
@@ -80,34 +80,34 @@ func extractDetailedContent(body string) (string, error) {
 	// Find content between <<< and >>>
 	startMarker := "<<<"
 	endMarker := ">>>"
-	
+
 	startIndex := strings.Index(body, startMarker)
 	if startIndex == -1 {
 		return "", fmt.Errorf("missing opening marker '<<<'")
 	}
-	
+
 	endIndex := strings.LastIndex(body, endMarker)
 	if endIndex == -1 {
 		return "", fmt.Errorf("missing closing marker '>>>'")
 	}
-	
+
 	if endIndex <= startIndex {
 		return "", fmt.Errorf("closing marker '>>>' must come after opening marker '<<<'")
 	}
-	
+
 	// Extract content between markers
 	content := body[startIndex+len(startMarker) : endIndex]
 	content = strings.TrimSpace(content)
-	
+
 	if content == "" {
 		return "", fmt.Errorf("no content found between markers")
 	}
-	
+
 	// Validate that content has some structure
 	if !strings.Contains(content, "**") && !strings.Contains(content, ":") {
 		return "", fmt.Errorf("content appears to be unstructured - please use the template format")
 	}
-	
+
 	return content, nil
 }
 
@@ -116,29 +116,29 @@ func extractUserPersona(body string) (string, error) {
 	// Find content between [[[ and ]]]
 	startMarker := "[[["
 	endMarker := "]]]"
-	
+
 	startIndex := strings.Index(body, startMarker)
 	if startIndex == -1 {
 		return "", fmt.Errorf("no user persona found")
 	}
-	
+
 	endIndex := strings.LastIndex(body, endMarker)
 	if endIndex == -1 {
 		return "", fmt.Errorf("missing closing marker ']]]'")
 	}
-	
+
 	if endIndex <= startIndex {
 		return "", fmt.Errorf("closing marker ']]]' must come after opening marker '[[['")
 	}
-	
+
 	// Extract content between markers
 	content := body[startIndex+len(startMarker) : endIndex]
 	content = strings.TrimSpace(content)
-	
+
 	if content == "" || content == "[Paste your complete persona here]" {
 		return "", fmt.Errorf("no user persona content provided")
 	}
-	
+
 	return content, nil
 }
 
@@ -148,15 +148,15 @@ func (p *ParsedIssue) FormatForPrompt() string {
 		// No additional content provided, create persona based on name only
 		return fmt.Sprintf(`Create a comprehensive persona for: %s
 
-No additional details were provided. Please create a detailed persona profile based on your knowledge of this person/character, including their background, personality traits, speaking style, areas of expertise, values, beliefs, goals, and any other relevant characteristics that would help in AI interactions.`, 
+No additional details were provided. Please create a detailed persona profile based on your knowledge of this person/character, including their background, personality traits, speaking style, areas of expertise, values, beliefs, goals, and any other relevant characteristics that would help in AI interactions.`,
 			p.FullName)
 	}
-	
+
 	return fmt.Sprintf(`Create a comprehensive persona for: %s
 
 %s
 
-Please create a detailed persona profile that captures all the provided information and expands upon it to create a complete, nuanced character that can be used for AI interactions.`, 
+Please create a detailed persona profile that captures all the provided information and expands upon it to create a complete, nuanced character that can be used for AI interactions.`,
 		p.FullName, p.DetailedContent)
 }
 
@@ -172,7 +172,7 @@ I couldn't parse this issue to create a persona. %s
 2. **Body**: Must include content wrapped in <<< and >>> markers
 
 **Example:**
-` + "```markdown" + `
+`+"```markdown"+`
 **Full Name:** David Attenborough
 
 <<<
@@ -185,7 +185,7 @@ Natural historian and broadcaster...
 
 [Continue with other sections]
 >>>
-` + "```" + `
+`+"```"+`
 
 Please update your issue to match the template format and I'll process it. You can find the full template in the repository's issue templates.
 

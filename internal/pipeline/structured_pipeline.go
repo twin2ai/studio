@@ -34,7 +34,7 @@ func (p *Pipeline) processNewIssuesWithStructure(ctx context.Context) error {
 		parsedIssue, parseErr := parser.ParsePersonaIssue(issue)
 		if parseErr != nil {
 			p.logger.Errorf("Failed to parse issue #%d: %v", *issue.Number, parseErr)
-			
+
 			// Only comment on parsing errors that are about title format
 			// Body is now optional, so we don't need to comment about missing content
 			if strings.Contains(parseErr.Error(), "title") {
@@ -46,7 +46,7 @@ func (p *Pipeline) processNewIssuesWithStructure(ctx context.Context) error {
 					p.logger.Warnf("Failed to comment parsing error on issue #%d: %v", *issue.Number, err)
 				}
 			}
-			
+
 			// Mark as processed to avoid repeated error comments
 			p.processed[*issue.Number] = true
 			if err := p.saveProcessedIssue(*issue.Number); err != nil {
@@ -78,7 +78,7 @@ func (p *Pipeline) processNewIssuesWithStructure(ctx context.Context) error {
 		if err != nil {
 			p.logger.Errorf("Failed to create structured PR for issue #%d: %v",
 				*issue.Number, err)
-			
+
 			// Check if PR already exists (common error)
 			if strings.Contains(err.Error(), "A pull request already exists") {
 				p.logger.Infof("PR already exists for issue #%d, marking as processed", *issue.Number)
@@ -252,7 +252,7 @@ func (p *Pipeline) updateStructuredPR(ctx context.Context, pr *github.PullReques
 	}
 
 	branchName := *pr.Head.Ref
-	
+
 	// Extract persona folder name
 	parts := strings.Split(branchName, "/")
 	if len(parts) < 2 {
@@ -279,11 +279,10 @@ func (p *Pipeline) updateStructuredPR(ctx context.Context, pr *github.PullReques
 		{fmt.Sprintf("%s/raw/gemini.md", baseFolder), files.GeminiRaw, "Update Gemini's raw output"},
 		{fmt.Sprintf("%s/raw/grok.md", baseFolder), files.GrokRaw, "Update Grok's raw output"},
 		{fmt.Sprintf("%s/raw/gpt.md", baseFolder), files.GPTRaw, "Update GPT-4's raw output"},
-		
+
 		// Main files
 		{fmt.Sprintf("%s/synthesized.md", baseFolder), files.FullSynthesis, "Update synthesized persona"},
 	}
-
 
 	// Update each file
 	for _, update := range fileUpdates {
@@ -317,7 +316,7 @@ func (p *Pipeline) updateStructuredPR(ctx context.Context, pr *github.PullReques
 			p.logger.Warnf("File %s not found, skipping update", update.path)
 			continue
 		}
-		
+
 		p.logger.Debugf("Updated file: %s", update.path)
 	}
 

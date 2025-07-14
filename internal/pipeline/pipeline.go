@@ -29,6 +29,7 @@ type Pipeline struct {
 	github            *githubclient.Client
 	generator         *persona.Generator
 	multiGenerator    *multiprovider.Generator
+	promptIntegration *PromptPipelineIntegration
 	logger            *logrus.Logger
 	processed         map[int]bool
 	processedComments map[string]bool // Track processed comments by PR#-CommentID
@@ -56,11 +57,16 @@ func New(cfg *config.Config, logger *logrus.Logger) (*Pipeline, error) {
 	generator := persona.NewGenerator(claudeClient, logger)
 	multiGenerator := multiprovider.NewGenerator(claudeClient, geminiClient, grokClient, gptClient, logger)
 
+	// Create prompt integration (enable if Gemini API key is available)
+	promptEnabled := cfg.AI.Gemini.APIKey != ""
+	promptIntegration := NewPromptPipelineIntegration(geminiClient, githubClient, logger, ".", promptEnabled)
+
 	p := &Pipeline{
 		config:            cfg,
 		github:            githubClient,
 		generator:         generator,
 		multiGenerator:    multiGenerator,
+		promptIntegration: promptIntegration,
 		logger:            logger,
 		processed:         make(map[int]bool),
 		processedComments: make(map[string]bool),
@@ -118,6 +124,11 @@ func (p *Pipeline) run(ctx context.Context) error {
 		p.logger.Errorf("Structured pipeline run failed: %v", err)
 	}
 
+	// Process prompt generation triggers
+	if err := p.promptIntegration.ProcessPromptGeneration(ctx); err != nil {
+		p.logger.Errorf("Prompt generation processing failed: %v", err)
+	}
+
 	return nil
 }
 
@@ -150,7 +161,7 @@ func (p *Pipeline) processUpdateRequests(ctx context.Context) error {
 		request, err := ParseUpdateRequest(issue)
 		if err != nil {
 			p.logger.Errorf("Failed to parse update request from issue #%d: %v", *issue.Number, err)
-			
+
 			// Comment on the issue with error
 			errorComment := fmt.Sprintf(`❌ **Unable to Process Update Request**
 
@@ -183,7 +194,7 @@ Please ensure the persona name matches an existing persona exactly.
 		// Process the update
 		if err := p.ProcessPersonaUpdate(ctx, *request); err != nil {
 			p.logger.Errorf("Failed to process persona update: %v", err)
-			
+
 			// Comment on the issue with error
 			errorComment := fmt.Sprintf(`❌ **Failed to Update Persona**
 
@@ -268,7 +279,7 @@ func (p *Pipeline) processNewIssues(ctx context.Context) error {
 		if err != nil {
 			p.logger.Errorf("Failed to create PR for issue #%d: %v",
 				*issue.Number, err)
-			
+
 			// Check if PR already exists (common error)
 			if strings.Contains(err.Error(), "A pull request already exists") {
 				p.logger.Infof("PR already exists for issue #%d, marking as processed", *issue.Number)
@@ -381,7 +392,7 @@ func (p *Pipeline) processPRComments(ctx context.Context) error {
 			p.logger.Errorf("Failed to get actual file path for PR #%d: %v", *pr.Number, err)
 			continue
 		}
-		
+
 		err = p.github.UpdatePersonaPR(ctx, *pr.Number, updatedPersona.Name, updatedPersona.Content, branchName, filePath)
 		if err != nil {
 			p.logger.Errorf("Failed to update PR #%d: %v", *pr.Number, err)
@@ -441,7 +452,7 @@ func (p *Pipeline) saveProcessedIssue(issueNumber int) error {
 
 func (p *Pipeline) loadProcessedComments() error {
 	filePath := filepath.Join(p.config.Pipeline.DataDir, "processed_comments.txt")
-	
+
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -456,7 +467,7 @@ func (p *Pipeline) loadProcessedComments() error {
 		if line == "" {
 			continue
 		}
-		
+
 		p.processedComments[line] = true
 	}
 
@@ -465,7 +476,7 @@ func (p *Pipeline) loadProcessedComments() error {
 
 func (p *Pipeline) saveProcessedComment(prNumber int, commentID int64) error {
 	filePath := filepath.Join(p.config.Pipeline.DataDir, "processed_comments.txt")
-	
+
 	f, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
@@ -484,19 +495,19 @@ func (p *Pipeline) markCommentAsProcessed(prNumber int, commentID int64) {
 
 func (p *Pipeline) filterUnprocessedComments(feedback []string, prNumber int, comments []*github.IssueComment) []string {
 	var unprocessed []string
-	
+
 	for _, comment := range comments {
 		if comment.Body == nil || comment.ID == nil {
 			continue
 		}
-		
+
 		// Skip Studio's own comments
 		if strings.Contains(*comment.Body, "Studio") || strings.Contains(*comment.Body, "Updated automatically") {
 			continue
 		}
-		
+
 		commentKey := fmt.Sprintf("%d-%d", prNumber, *comment.ID)
-		
+
 		// Only process if not already processed and contains feedback keywords
 		if !p.processedComments[commentKey] && p.generator.ContainsFeedbackKeywords(*comment.Body) {
 			unprocessed = append(unprocessed, *comment.Body)
@@ -505,7 +516,7 @@ func (p *Pipeline) filterUnprocessedComments(feedback []string, prNumber int, co
 			p.logger.Infof("Skipping already processed comment: %s", commentKey)
 		}
 	}
-	
+
 	return unprocessed
 }
 
@@ -514,7 +525,7 @@ func (p *Pipeline) findOriginalIssue(ctx context.Context, pr *github.PullRequest
 	if pr.Body == nil {
 		return nil, fmt.Errorf("PR body is empty")
 	}
-	
+
 	body := *pr.Body
 	// Look for pattern like "Created from issue: owner/repo#123"
 	re := regexp.MustCompile(`Created from issue: [^#]+#(\d+)`)
@@ -522,18 +533,18 @@ func (p *Pipeline) findOriginalIssue(ctx context.Context, pr *github.PullRequest
 	if len(matches) < 2 {
 		return nil, fmt.Errorf("could not find issue number in PR body")
 	}
-	
+
 	issueNumber, err := strconv.Atoi(matches[1])
 	if err != nil {
 		return nil, fmt.Errorf("invalid issue number: %v", err)
 	}
-	
+
 	// Get the issue
 	issue, _, err := p.github.GetClient().Issues.Get(ctx, p.config.GitHub.Owner, p.config.GitHub.Repo, issueNumber)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get issue #%d: %w", issueNumber, err)
 	}
-	
+
 	return issue, nil
 }
 
@@ -541,9 +552,9 @@ func (p *Pipeline) getExistingPersonaContent(ctx context.Context, pr *github.Pul
 	if pr.Head == nil || pr.Head.Ref == nil {
 		return "", fmt.Errorf("PR head ref is nil")
 	}
-	
+
 	branchName := *pr.Head.Ref
-	
+
 	// Get the list of files in the personas directory for this branch
 	_, dirContent, _, err := p.github.GetClient().Repositories.GetContents(
 		ctx, p.config.GitHub.PersonasOwner, p.config.GitHub.PersonasRepo, "personas",
@@ -551,7 +562,7 @@ func (p *Pipeline) getExistingPersonaContent(ctx context.Context, pr *github.Pul
 	if err != nil {
 		return "", fmt.Errorf("failed to get personas directory: %w", err)
 	}
-	
+
 	// Find the .md file in the personas directory
 	var personaFile *github.RepositoryContent
 	for _, file := range dirContent {
@@ -560,11 +571,11 @@ func (p *Pipeline) getExistingPersonaContent(ctx context.Context, pr *github.Pul
 			break
 		}
 	}
-	
+
 	if personaFile == nil {
 		return "", fmt.Errorf("no .md file found in personas directory")
 	}
-	
+
 	// Get the actual file content
 	fileContent, _, _, err := p.github.GetClient().Repositories.GetContents(
 		ctx, p.config.GitHub.PersonasOwner, p.config.GitHub.PersonasRepo, *personaFile.Path,
@@ -572,16 +583,16 @@ func (p *Pipeline) getExistingPersonaContent(ctx context.Context, pr *github.Pul
 	if err != nil {
 		return "", fmt.Errorf("failed to get file content: %w", err)
 	}
-	
+
 	if fileContent.Content == nil {
 		return "", fmt.Errorf("file content is empty")
 	}
-	
+
 	content, err := fileContent.GetContent()
 	if err != nil {
 		return "", fmt.Errorf("failed to decode file content: %w", err)
 	}
-	
+
 	return content, nil
 }
 
@@ -595,9 +606,9 @@ func (p *Pipeline) getActualPersonaFilePath(ctx context.Context, pr *github.Pull
 	if pr.Head == nil || pr.Head.Ref == nil {
 		return "", fmt.Errorf("PR head ref is nil")
 	}
-	
+
 	branchName := *pr.Head.Ref
-	
+
 	// Get the list of files in the personas directory for this branch
 	_, dirContent, _, err := p.github.GetClient().Repositories.GetContents(
 		ctx, p.config.GitHub.PersonasOwner, p.config.GitHub.PersonasRepo, "personas",
@@ -605,13 +616,13 @@ func (p *Pipeline) getActualPersonaFilePath(ctx context.Context, pr *github.Pull
 	if err != nil {
 		return "", fmt.Errorf("failed to get personas directory: %w", err)
 	}
-	
+
 	// Find the .md file in the personas directory
 	for _, file := range dirContent {
 		if file.Name != nil && strings.HasSuffix(*file.Name, ".md") {
 			return *file.Path, nil
 		}
 	}
-	
+
 	return "", fmt.Errorf("no .md file found in personas directory")
 }

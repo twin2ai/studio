@@ -52,7 +52,7 @@ The synthesized persona must follow this exact structure:
 ## Output Summary
 - **Section 0**: Core Essence (Priority Elements)
 - **Sections 1-10**: Core persona profile (2,500-3,500 words total)
-- **Section 10.5**: Platform Adaptation Bank
+- **Section 11**: Platform Adaptation Bank
 - **Section 12**: Voice synthesis parameters
 - **Section 13**: Quick Reference Extraction
 - **Optional Appendix**: Combined source documentation and authenticity assessment
@@ -274,6 +274,46 @@ Brief paragraph describing:
   - Unique insights: [What only this version provided]
 
 **Calculation Method**: Percentage based on [number of adopted examples, unique insights incorporated, section leadership, and overall narrative influence]
+
+#### Individual Classification Tags
+
+**Primary Tags:** [List 2-3 most defining tags from predefined list]
+- `tag_name` - Brief explanation of why this tag applies
+
+**Secondary Tags:** [List 1-3 supporting tags from predefined list if applicable]
+- `tag_name` - Brief explanation of relevance
+
+**Tag Selection Guidelines:**
+1. **FIRST** - Review all 20 predefined tags below and select the most appropriate ones
+2. **ONLY IF** no predefined tags adequately capture a critical aspect of the individual's identity, create a custom tag
+3. **Prioritize** established categories over novel classifications
+
+**Available Predefined Tags (USE THESE FIRST):**
+1. `celebrity` - Performers, entertainers, public figures
+2. `business` - CEOs, executives, business leaders
+3. `tech` - Technology leaders, innovators
+4. `entrepreneur` - Startup founders, business creators
+5. `finance` - Investors, financial experts
+6. `author` - Writers, published authors
+7. `sports` - Athletes, sports figures
+8. `scientist` - Researchers, scientific minds
+9. `artist` - Creative professionals, visual artists
+10. `innovator` - Pioneers, breakthrough thinkers
+11. `philanthropist` - Charitable givers, humanitarians
+12. `activist` - Social justice advocates
+13. `investor` - Venture capitalists, investment professionals
+14. `educator` - Teachers, professors
+15. `naturalist` - Nature experts, conservationists
+16. `broadcaster` - TV/radio presenters
+17. `chef` - Culinary professionals
+18. `philosopher` - Philosophical thinkers
+19. `politician` - Political figures
+20. `researcher` - Academic researchers
+
+**Custom Tags (ONLY if predefined tags are insufficient):**
+- `new_tag_name` - Clear justification why none of the 20 predefined tags work
+- Must explain: What critical aspect this captures that existing tags miss
+
 
 ---
 

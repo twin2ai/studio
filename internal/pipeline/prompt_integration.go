@@ -28,7 +28,7 @@ func NewPromptPipelineIntegration(geminiClient *gemini.Client, githubClient *git
 	}
 
 	githubService := prompts.NewGitHubService(geminiClient, githubClient, logger, baseDir)
-	
+
 	// Create monitor with GitHub integration for repository-wide monitoring
 	monitor := assets.NewMonitorWithGitHub(baseDir, logger, githubClient)
 

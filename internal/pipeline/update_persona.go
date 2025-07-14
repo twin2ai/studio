@@ -88,10 +88,10 @@ func ParseUpdateRequest(issue *github.Issue) (*UpdatePersonaRequest, error) {
 	body := *issue.Body
 	startMarker := "[[["
 	endMarker := "]]]"
-	
+
 	startIndex := strings.Index(body, startMarker)
 	endIndex := strings.LastIndex(body, endMarker)
-	
+
 	var userPersona string
 	if startIndex != -1 && endIndex != -1 && endIndex > startIndex {
 		// Extract content between markers

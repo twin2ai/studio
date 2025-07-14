@@ -142,31 +142,31 @@ func (g *Generator) formatFeedback(feedback []string) string {
 
 func (g *Generator) AnalyzeComments(comments []*github.IssueComment) []string {
 	var feedback []string
-	
+
 	for _, comment := range comments {
 		if comment.Body == nil {
 			continue
 		}
-		
+
 		body := *comment.Body
-		
+
 		// Skip Studio's own comments
 		if strings.Contains(body, "Studio") {
 			continue
 		}
-		
+
 		// Look for feedback keywords that indicate regeneration is needed
 		if g.ContainsFeedbackKeywords(body) {
 			feedback = append(feedback, body)
 		}
 	}
-	
+
 	return feedback
 }
 
 func (g *Generator) ContainsFeedbackKeywords(comment string) bool {
 	lowerComment := strings.ToLower(comment)
-	
+
 	feedbackKeywords := []string{
 		"truncated",
 		"incomplete",
@@ -186,13 +186,13 @@ func (g *Generator) ContainsFeedbackKeywords(comment string) bool {
 		"redo",
 		"revise",
 	}
-	
+
 	for _, keyword := range feedbackKeywords {
 		if strings.Contains(lowerComment, keyword) {
 			return true
 		}
 	}
-	
+
 	return false
 }
 

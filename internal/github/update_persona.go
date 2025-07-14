@@ -46,15 +46,15 @@ func (c *Client) UpdatePersonaWithUserInput(ctx context.Context, personaName str
 	// Create file path
 	fileName := strings.ToLower(strings.ReplaceAll(personaName, " ", "_"))
 	fileName = strings.ReplaceAll(fileName, "/", "_")
-	
+
 	// For structured personas, update the synthesized.md file
 	filePath := fmt.Sprintf("personas/%s/synthesized.md", fileName)
-	
+
 	// Check if this is a structured persona folder
 	_, _, _, err = c.client.Repositories.GetContents(
 		ctx, c.personasOwner, c.personasRepo, filePath,
 		&github.RepositoryContentGetOptions{Ref: defaultBranch})
-	
+
 	if err != nil {
 		// Fallback to flat structure
 		filePath = fmt.Sprintf("personas/%s.md", fileName)
@@ -71,7 +71,7 @@ func (c *Client) UpdatePersonaWithUserInput(ctx context.Context, personaName str
 	existingFile, _, _, err := c.client.Repositories.GetContents(
 		ctx, c.personasOwner, c.personasRepo, filePath,
 		&github.RepositoryContentGetOptions{Ref: defaultBranch})
-	
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to get existing persona file: %w", err)
 	}
@@ -134,21 +134,21 @@ User-provided persona synthesized with existing version
 func (c *Client) GetExistingPersona(ctx context.Context, personaName string) (string, error) {
 	fileName := strings.ToLower(strings.ReplaceAll(personaName, " ", "_"))
 	fileName = strings.ReplaceAll(fileName, "/", "_")
-	
+
 	// Try structured format first
 	filePath := fmt.Sprintf("personas/%s/synthesized.md", fileName)
-	
+
 	fileContent, _, _, err := c.client.Repositories.GetContents(
 		ctx, c.personasOwner, c.personasRepo, filePath,
 		&github.RepositoryContentGetOptions{})
-	
+
 	if err != nil {
 		// Try flat format
 		filePath = fmt.Sprintf("personas/%s.md", fileName)
 		fileContent, _, _, err = c.client.Repositories.GetContents(
 			ctx, c.personasOwner, c.personasRepo, filePath,
 			&github.RepositoryContentGetOptions{})
-		
+
 		if err != nil {
 			return "", fmt.Errorf("persona not found: %w", err)
 		}

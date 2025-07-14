@@ -7,7 +7,7 @@ Please conduct extensive research and develop a detailed persona profile that ca
 ## Output Summary
 - **Section 0**: Core Essence (Priority Elements)
 - **Sections 1-10**: Core persona profile (3,500-4,500 words total)
-- **Section 10.5**: Platform Adaptation Bank (500-1,000 words)
+- **Section 11**: Platform Adaptation Bank (500-1,000 words)
 - **Optional Appendix**: Source documentation and authenticity assessment
 - **Total Length**: 4,500-5,500 words including all components
 
@@ -308,7 +308,7 @@ Provide an overall authenticity assessment:
 
 The final persona profile should be:
 - 3,500-4,500 words for the main profile (sections 0-10)
-- Plus 500-1,000 words for Platform Adaptation Bank (section 10.5)
+- Plus 500-1,000 words for Platform Adaptation Bank (section 11)
 - Plus primary source list with citations (if included)
 - Plus authenticity score with justification (if included)
 - Written in clear, accessible language

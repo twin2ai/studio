@@ -36,6 +36,8 @@ artifacts/
 data/
 logs/
 *.log
+names.txt
+personas
 
 # Docker
 docker-compose.override.yml
