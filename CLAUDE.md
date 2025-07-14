@@ -30,6 +30,10 @@ GOOS=linux GOARCH=amd64 go build -o studio-linux cmd/studio/main.go
 # Docker deployment
 docker-compose up -d
 docker-compose logs -f studio
+
+# Batch persona generation
+./studio batch names.txt                # Process personas from file
+./studio batch -force names.txt         # Force regeneration even if exists
 ```
 
 ## Architecture Overview
@@ -42,10 +46,12 @@ docker-compose logs -f studio
 5. **PR Creation**: Generated personas are submitted as pull requests to `twin2ai/personas`
 6. **Comment Processing**: Feedback comments trigger regeneration using keywords like "regenerate", "truncated"
 7. **Update Processing**: User-submitted updates are synthesized with existing personas (no multi-provider generation)
+8. **Batch Processing**: Process multiple personas from a text file via `studio batch` command
 
 ### Key Components
 - **`internal/pipeline/pipeline.go`**: Main orchestration, handles both new issues and PR comment feedback
 - **`internal/pipeline/update_persona.go`**: Handles persona update requests
+- **`internal/pipeline/batch_pipeline.go`**: Batch processing of personas from text files
 - **`internal/multiprovider/generator.go`**: Parallel AI provider coordination and response combination
 - **`internal/multiprovider/enhanced_generator.go`**: Structured persona generation and updates
 - **`internal/{claude,gemini,grok,gpt}/client.go`**: Individual AI provider clients with model-specific configurations
@@ -75,6 +81,7 @@ docker-compose logs -f studio
 ### State Management
 - **Processed Issues**: Tracked in `data/processed_issues.txt` to prevent duplicate processing
 - **Processed Comments**: Tracked in `data/processed_comments.txt` using `{PR#}-{CommentID}` format
+- **Batch Processed Names**: Tracked in `data/batch_processed_names.txt` to avoid reprocessing
 - **Artifacts**: Timestamped storage in `artifacts/{provider}/` with separate dirs for feedback iterations
 
 ### Configuration Requirements

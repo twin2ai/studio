@@ -4,21 +4,26 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/google/go-github/v57/github"
+	"github.com/twin2ai/studio/internal/assets"
 )
 
 // PersonaFiles represents all the files that make up a complete persona package
 type PersonaFiles struct {
 	// Raw AI outputs
-	ClaudeRaw  string
-	GeminiRaw  string
-	GrokRaw    string
-	GPTRaw     string
-	UserRaw    string // Optional user-supplied persona
-	
+	ClaudeRaw string
+	GeminiRaw string
+	GrokRaw   string
+	GPTRaw    string
+	UserRaw   string // Optional user-supplied persona
+
 	// Synthesized version
 	FullSynthesis string // The complete synthesized persona
+
+	// Asset tracking
+	AssetStatus *assets.AssetStatus // Asset generation status
 }
 
 // CreateStructuredPersonaPR creates a pull request with the new folder structure
@@ -74,14 +79,14 @@ func (c *Client) CreateStructuredPersonaPR(ctx context.Context, issueNumber int,
 		{fmt.Sprintf("%s/raw/gemini.md", baseFolder), files.GeminiRaw, "Gemini's raw output"},
 		{fmt.Sprintf("%s/raw/grok.md", baseFolder), files.GrokRaw, "Grok's raw output"},
 		{fmt.Sprintf("%s/raw/gpt.md", baseFolder), files.GPTRaw, "GPT-4's raw output"},
-		
+
 		// Main files
 		{fmt.Sprintf("%s/synthesized.md", baseFolder), files.FullSynthesis, "Full synthesized persona"},
-		
+
 		// README for the persona folder
 		{fmt.Sprintf("%s/README.md", baseFolder), c.generatePersonaReadme(personaName, issueNumber), "Persona overview"},
 	}
-	
+
 	// Add user-supplied persona if provided
 	if files.UserRaw != "" {
 		fileOperations = append(fileOperations, struct {
@@ -91,6 +96,19 @@ func (c *Client) CreateStructuredPersonaPR(ctx context.Context, issueNumber int,
 		}{fmt.Sprintf("%s/raw/user_supplied.md", baseFolder), files.UserRaw, "User-supplied persona"})
 	}
 
+	// Add asset status file if provided
+	if files.AssetStatus != nil {
+		statusContent, err := c.generateAssetStatusJSON(files.AssetStatus)
+		if err != nil {
+			c.logger.Warnf("Failed to generate asset status JSON: %v", err)
+		} else {
+			fileOperations = append(fileOperations, struct {
+				path    string
+				content string
+				message string
+			}{fmt.Sprintf("%s/.assets_status.json", baseFolder), statusContent, "Asset generation status"})
+		}
+	}
 
 	// Create all files
 	for _, op := range fileOperations {
@@ -131,29 +149,33 @@ func (c *Client) CreateStructuredPersonaPR(ctx context.Context, issueNumber int,
 	if files.UserRaw != "" {
 		includesUserPersona = "\n- **User-supplied persona** included in synthesis"
 	}
-	
+
+	// Build source reference based on whether this is batch processing or issue-based
+	sourceRef := ""
+	if issueNumber > 0 {
+		sourceRef = fmt.Sprintf("Created from issue: %s/%s#%d", c.issuesOwner, c.issuesRepo, issueNumber)
+	} else {
+		sourceRef = "Created via batch processing"
+	}
+
 	prBody := fmt.Sprintf(`This PR adds a comprehensive persona package for: **%s**
 
 ## 📁 Structure
 This persona includes:
 - **Raw outputs** from all 4 AI providers (Claude, Gemini, Grok, GPT-4)%s
 - **Synthesized version** combining the best of all outputs
-- **Prompt-ready version** (500-1000 words) for immediate use
-- **Platform-specific adaptations** for different environments
 
 ## 📍 Files
 - %s/raw/ - Individual AI provider outputs
 - %s/synthesized.md - Full synthesized persona
-- %s/prompt_ready.md - Condensed version for prompts
-- %s/platforms/ - Platform-specific versions
+- %s/README.md - Documentation and overview
 
 ## 🔗 Source
-Created from issue: %s/%s#%d
+%s
 
 ---
 *This is an automated PR created by [Studio](https://github.com/twin2ai/studio)*`,
-		personaName, includesUserPersona, baseFolder, baseFolder, baseFolder, baseFolder, baseFolder,
-		c.issuesOwner, c.issuesRepo, issueNumber)
+		personaName, includesUserPersona, baseFolder, baseFolder, baseFolder, sourceRef)
 
 	pr := &github.NewPullRequest{
 		Title: github.String(fmt.Sprintf("Add persona package: %s", personaName)),
@@ -181,20 +203,22 @@ Created from issue: %s/%s#%d
 	comment := fmt.Sprintf(`✅ Persona package generated successfully!
 
 📦 **Complete persona package created with:**
-- Raw outputs from all 4 AI providers
-- Synthesized full persona
-- Prompt-ready condensed version
-- Platform-specific adaptations
+- Raw outputs from all 4 AI providers (Claude, Gemini, Grok, GPT-4)
+- Synthesized full persona combining the best elements
+- Documentation and metadata
 
 View the generated persona package: %s
 
 The persona has been created in the [twin2ai/personas](https://github.com/twin2ai/personas) repository.`, prURL)
 
-	_, _, err = c.client.Issues.CreateComment(
-		ctx, c.issuesOwner, c.issuesRepo, issueNumber,
-		&github.IssueComment{Body: github.String(comment)})
-	if err != nil {
-		c.logger.Warnf("Failed to comment on issue: %v", err)
+	// Only comment on real issues (not batch processing which uses issue number 0)
+	if issueNumber > 0 {
+		_, _, err = c.client.Issues.CreateComment(
+			ctx, c.issuesOwner, c.issuesRepo, issueNumber,
+			&github.IssueComment{Body: github.String(comment)})
+		if err != nil {
+			c.logger.Warnf("Failed to comment on issue: %v", err)
+		}
 	}
 
 	return pullRequest, nil
@@ -217,17 +241,81 @@ This folder contains a comprehensive persona package generated by Studio.
 
 ### 🎯 Main Files
 - **synthesized.md** - Full synthesized persona combining best elements from all AI providers
-- **prompt_ready.md** - Condensed 500-1000 word version optimized for immediate use in prompts
+
+## Asset Generation
+
+### Available Asset Types
+The following assets can be automatically generated based on the synthesized persona:
+
+- **Prompt-Ready Version** - Condensed version optimized for AI prompts
+- **Platform Adaptations** - Platform-specific versions (Discord, Telegram, etc.)
+- **Voice Clone Config** - Voice synthesis parameters
+- **Image Avatar Config** - Avatar generation settings
+- **Chatbot Config** - Deployment configuration
+- **API Endpoint Config** - API integration settings
+
+### Triggering Asset Generation
+To generate additional assets, add trigger markers to this README:
+
+%s
+
+### Asset Status
+Check **.assets_status.json** for current generation status and timestamps.
 
 ## Usage
 
-1. **For use**: Use synthesized.md for the complete persona
+1. **For immediate use**: Use synthesized.md for the complete persona
 2. **For analysis**: Compare /raw outputs from different AI providers
+3. **For assets**: Add generation triggers above to create additional formats
 
 ## Source
 Generated from issue #%d in the twin2ai/personas repository.
 
 ---
-*Created by [Studio](https://github.com/twin2ai/studio) - Multi-AI Persona Generation Pipeline*`, 
-		personaName, issueNumber)
+*Created by [Studio](https://github.com/twin2ai/studio) - Multi-AI Persona Generation Pipeline*`,
+		personaName, generateAssetTriggerExamples(), issueNumber)
+}
+
+// generateAssetTriggerExamples creates example trigger markers for the README
+func generateAssetTriggerExamples() string {
+	return `
+<!-- To generate all platform and variation prompts, add this marker: -->
+<!-- GENERATE:prompts -->
+
+<!-- To generate only platform-specific prompts (ChatGPT, Claude, etc.), add this marker: -->
+<!-- GENERATE:platform_prompts -->
+
+<!-- To generate only variation prompts (condensed, alternative), add this marker: -->
+<!-- GENERATE:variation_prompts -->
+
+<!-- To generate other assets, add these markers: -->
+<!-- GENERATE:prompt_ready -->
+<!-- GENERATE:platform_adaptations -->
+<!-- GENERATE:voice_clone -->
+<!-- GENERATE:image_avatar -->
+<!-- GENERATE:chatbot_config -->
+<!-- GENERATE:api_endpoint -->`
+}
+
+// generateAssetStatusJSON creates JSON content for the asset status file
+func (c *Client) generateAssetStatusJSON(status *assets.AssetStatus) (string, error) {
+	// Ensure timestamp is set
+	if status.LastSynthesizedUpdate.IsZero() {
+		status.LastSynthesizedUpdate = time.Now()
+	}
+
+	// Initialize maps if nil
+	if status.AssetGenerationFlags == nil {
+		status.AssetGenerationFlags = make(map[string]bool)
+	}
+	if status.Metadata == nil {
+		status.Metadata = make(map[string]string)
+	}
+
+	// Add creation metadata
+	status.Metadata["created_by"] = "studio"
+	status.Metadata["created_at"] = time.Now().Format(time.RFC3339)
+
+	// Convert to JSON with proper formatting
+	return assets.SerializeAssetStatus(status)
 }
