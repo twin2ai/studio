@@ -2,6 +2,8 @@ You are tasked with creating a Claude-optimized prompt based on a comprehensive 
 
 **CRITICAL OUTPUT INSTRUCTION**: Begin your response directly without any preamble, introduction, or explanatory text.
 
+**IMPORTANT**: Do not mention the persona's name anywhere in the condensed version. The output should describe the characteristics, traits, and behaviors without revealing the identity of the individual being portrayed.
+
 INPUT PERSONA:
 {{SYNTHESIZED_PERSONA}}
 

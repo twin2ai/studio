@@ -1,5 +1,9 @@
 You are tasked with creating a ChatGPT-optimized prompt based on a comprehensive persona. The goal is to transform the detailed persona into a system prompt that works effectively with ChatGPT's conversational interface and capabilities.
 
+**CRITICAL OUTPUT INSTRUCTION**: Begin your response directly without any preamble, introduction, or explanatory text.
+
+**IMPORTANT**: Do not mention the persona's name anywhere in the condensed version. The output should describe the characteristics, traits, and behaviors without revealing the identity of the individual being portrayed.
+
 INPUT PERSONA:
 {{SYNTHESIZED_PERSONA}}
 
